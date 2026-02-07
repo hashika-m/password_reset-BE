@@ -7,7 +7,7 @@ import nodemailer from 'nodemailer'
 
 
 
-export const signUp = async (req, res) => {
+export const register = async (req, res) => {
   try {
     const { email, password } = req.body
 
@@ -91,6 +91,94 @@ export const dashboard = async (req, res) => {
   }
 }
 
+// export const forgotPassword = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return res.status(400).json({ message: "Email is required" });
+//     }
+
+//     const user = await User.findOne({ email });
+//     if (!user) {
+//       return res.status(404).json({ message: "Email not found" });
+//     }
+//     // randomstring as token
+//     const token = Math.random().toString(36).slice(-8);
+
+//     user.resetPasswordToken = token;
+//     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+//     await user.save();
+
+//     // mail setup
+//     let transporter;
+//     let fromEmail;
+//     let link;
+
+//     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+//       // Use Gmail for dev/production if env variables are set
+//       transporter = nodemailer.createTransport({
+//         service: 'gmail',
+//         auth: {
+//           user: process.env.EMAIL_USER,
+//           pass: process.env.EMAIL_PASS,
+//         },
+//       });
+//       fromEmail = process.env.EMAIL_USER;
+//     } else {
+//       // Use Ethereal for local testing
+//       const testAccount = await nodemailer.createTestAccount();
+//       transporter = nodemailer.createTransport({
+//         host: "smtp.ethereal.email",
+//         port: 587,
+//         secure: false,
+//         auth: {
+//           user: testAccount.user,
+//           pass: testAccount.pass,
+//         },
+//         tls: {
+//           rejectUnauthorized: false,
+//         },
+//         connectionTimeout: 10000,
+//         greetingTimeout: 10000,
+//         socketTimeout: 10000,
+//       });
+//       fromEmail = '"Admin" <admin@email.com>';
+//     }
+
+//     // // info & resetlink in mail
+//     const resetLink = `http://localhost:3000/reset-password/${token}`;
+
+//     try {
+//       const info = await transporter.sendMail({
+//         from: fromEmail,
+//         to: user.email,
+//         subject: "Reset Password",
+//         html: `<h4>Reset Password link is given below. Click the link and reset your password.</h4>
+//            <a href="${resetLink}">${resetLink}</a>`,
+//       });
+//       if (process.env.EMAIL_USER) {
+//         console.log("Email sent:", info.messageId);
+//         link = null; // No preview link for Gmail
+//       } else {
+//         link = nodemailer.getTestMessageUrl(info);
+//         console.log("Preview URL:", link);
+//       }
+//       res.json({ message: "Reset link sent", link });
+//     } catch (emailError) {
+//       console.error("Email sending failed:", emailError);
+//       // For environments where SMTP might be blocked, return the link for testing
+//       res.json({ message: "Email sending failed, but here's the reset link for testing", link: resetLink });
+//     }
+
+//   } catch (err) {
+//     console.error("FORGOT PASSWORD ERROR:", err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -99,19 +187,28 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    const user = await User.findOne({ email });
+    const cleanEmail = email.trim();
+    console.log("Forgot password email received:", cleanEmail);
+
+    const user = await User.findOne({
+      email: { $regex: `^${cleanEmail}$`, $options: "i" },
+    });
+
     if (!user) {
-      return res.status(404).json({ message: "Email not found" });
+      return res.status(400).json({ message: "Email not found" });
     }
-    // randomstring as token
+
     const token = Math.random().toString(36).slice(-8);
 
     user.resetPasswordToken = token;
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // mail setup using Ethereal for both local and dev
+    const resetLink = `http://localhost:3000/reset-password/${token}`;
+    console.log("RESET PASSWORD LINK (FALLBACK):", resetLink);
+
     const testAccount = await nodemailer.createTestAccount();
+    console.log("ETHEREAL ACCOUNT:", testAccount.user);
 
     const transporter = nodemailer.createTransport({
       host: "smtp.ethereal.email",
@@ -121,39 +218,38 @@ export const forgotPassword = async (req, res) => {
         user: testAccount.user,
         pass: testAccount.pass,
       },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
+      tls: { rejectUnauthorized: false },
     });
 
-    // // info & resetlink in mail
-    const resetLink = `http://localhost:3000/reset-password/${token}`;
+    console.log("SENDING EMAIL...");
+    // console.log("RESET LINK (ALWAYS PRINTS):", resetLink);
 
-    try {
-      const info = await transporter.sendMail({
-        from: '"Admin" <admin@email.com>',
-        to: user.email,
-        subject: "Reset Password",
-        html: `<h4>Reset Password link is given below. Click the link and reset your password.</h4>
-           <a href="${resetLink}">${resetLink}</a>`,
-      });
-      const link = nodemailer.getTestMessageUrl(info);
-      console.log("Preview URL:", link);
-      res.json({ message: "Reset link sent", link });
-    } catch (emailError) {
-      console.error("Email sending failed:", emailError);
-      // For dev environments where SMTP might be blocked, return the link for testing
-      res.json({ message: "Email sending failed, but here's the reset link for testing", link: resetLink });
-    }
+
+    const info = await transporter.sendMail({
+      from: '"Admin" <admin@email.com>',
+      to: user.email,
+      subject: "Reset Password",
+      html: `<a href="${resetLink}">${resetLink}</a>`,
+    });
+
+    // console.log("EMAIL SENT");
+    // console.log("INFO:", info);
+
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    console.log("ETHEREAL PREVIEW URL:", previewUrl);
+
+    res.json({
+      message: "Reset link sent (Ethereal)",
+      previewUrl,
+    });
 
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
+
 
 
 export const resetPassword = async (req, res) => {

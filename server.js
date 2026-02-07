@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
 import userRoute from './routes/userRoute.js'
+import cors from 'cors'
 
 dotenv.config()
 const app=express()
@@ -10,6 +11,7 @@ connectDB()
 
 // middleware
 app.use(express.json())
+app.use(cors())
 // routes
 app.use('/api',userRoute)
 

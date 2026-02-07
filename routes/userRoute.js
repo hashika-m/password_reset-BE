@@ -1,5 +1,5 @@
 import express from 'express'
-import { dashboard, login, signUp, forgotPassword, resetPassword } from '../controllers/userController.js'
+import { dashboard, login, forgotPassword, resetPassword, register } from '../controllers/userController.js'
 import authMiddleware from '../middleware/authMiddleware.js'
 
 
@@ -11,7 +11,7 @@ const router = express.Router()
 // })
 
 
-router.post('/signup', signUp)
+router.post('/register', register)
 router.post('/login', login)
 router.get('/dashboard', authMiddleware, dashboard)
 router.post('/forgotPassword',forgotPassword)
