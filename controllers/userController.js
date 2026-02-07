@@ -110,7 +110,7 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // mail tsetaccount
+    // mail setup using Ethereal for both local and dev
     const testAccount = await nodemailer.createTestAccount();
 
     const transporter = nodemailer.createTransport({
@@ -126,7 +126,6 @@ export const forgotPassword = async (req, res) => {
       },
     });
 
-
     // // info & resetlink in mail
     const resetLink = `http://localhost:3000/reset-password/${token}`;
 
@@ -137,8 +136,8 @@ export const forgotPassword = async (req, res) => {
       html: `<h4>Reset Password link is given below. Click the link and reset your password.</h4>
          <a href="${resetLink}">${resetLink}</a>`,
     });
-    const link = nodemailer.getTestMessageUrl(info)
-    console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
+    const link = nodemailer.getTestMessageUrl(info);
+    console.log("Preview URL:", link);
 
     res.json({ message: "Reset link sent", link });
 
