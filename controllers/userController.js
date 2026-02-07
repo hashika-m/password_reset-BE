@@ -124,22 +124,30 @@ export const forgotPassword = async (req, res) => {
       tls: {
         rejectUnauthorized: false,
       },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
 
     // // info & resetlink in mail
     const resetLink = `http://localhost:3000/reset-password/${token}`;
 
-    const info = await transporter.sendMail({
-      from: '"Admin" <admin@email.com>',
-      to: user.email,
-      subject: "Reset Password",
-      html: `<h4>Reset Password link is given below. Click the link and reset your password.</h4>
-         <a href="${resetLink}">${resetLink}</a>`,
-    });
-    const link = nodemailer.getTestMessageUrl(info);
-    console.log("Preview URL:", link);
-
-    res.json({ message: "Reset link sent", link });
+    try {
+      const info = await transporter.sendMail({
+        from: '"Admin" <admin@email.com>',
+        to: user.email,
+        subject: "Reset Password",
+        html: `<h4>Reset Password link is given below. Click the link and reset your password.</h4>
+           <a href="${resetLink}">${resetLink}</a>`,
+      });
+      const link = nodemailer.getTestMessageUrl(info);
+      console.log("Preview URL:", link);
+      res.json({ message: "Reset link sent", link });
+    } catch (emailError) {
+      console.error("Email sending failed:", emailError);
+      // For dev environments where SMTP might be blocked, return the link for testing
+      res.json({ message: "Email sending failed, but here's the reset link for testing", link: resetLink });
+    }
 
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
