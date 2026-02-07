@@ -7,89 +7,88 @@ import nodemailer from 'nodemailer'
 
 
 
-export const signUp=async(req, res)=>{
-    try{
-        const {email, password}=req.body
+export const signUp = async (req, res) => {
+  try {
+    const { email, password } = req.body
 
-        if(!email||!password){
-            res.status(400)
-            res.json({message:'All fields are required'})
-             return
-        }
-   
-        const existingUser=await User.findOne({email})
-        if(existingUser){
-            
-            res.status(400)
-            res.json({message:'User already exists'})
-             return
-        }
-        const hashPassword= await bcrypt.hash(password,10)
-        const user=await User.create({
-             email,password:hashPassword
-        })
-        res.status(201)
-        res.json({message:'User created successfully',user})
-    }catch(err){
-      res.status(500)
-      res.json({message:err})
+    if (!email || !password) {
+      res.status(400)
+      res.json({ message: 'All fields are required' })
+      return
     }
-    
+
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+
+      res.status(400)
+      res.json({ message: 'User already exists' })
+      return
+    }
+    const hashPassword = await bcrypt.hash(password, 10)
+    const user = await User.create({
+      email, password: hashPassword
+    })
+    res.status(201)
+    res.json({ message: 'User created successfully', user })
+  } catch (err) {
+    res.status(500)
+    res.json({ message: err })
+  }
+
 }
 
-export const login=async(req, res)=>{
-    try{
-       const {email,password}=req.body
-       if(!email||!password){ 
-        res.status(400)
-        res.json({message:'All fields required'})
-         return
-       }
-    
-       const user=await User.findOne({email})
-       if(!user){
-        res.status(401).json({message:'User not found'})
-         return
-       }
-       const isPasswordMatch=await bcrypt.compare(password,user.password)
-       if(!isPasswordMatch){
-        res.status(401)
-        res.json({message:'Unauthorized user credentials'})
-        return
-       }
-
-       const token= jwt.sign(
-        {id:user._id,email:user.email,},
-        process.env.JWT_SECRET,
-        {expiresIn:'1h'}
-     )
-
-     res.json({token,
-        user:{
-            eamil:user.email,
-            password:user.password
-
-        }
-     })
-     return
-    }catch(err){
-       res.status(500).json({message:err.message})
-       return
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body
+    if (!email || !password) {
+      res.status(400)
+      res.json({ message: 'All fields required' })
+      return
     }
-  
-    
+
+    const user = await User.findOne({ email })
+    if (!user) {
+      res.status(401).json({ message: 'User not found' })
+      return
+    }
+    const isPasswordMatch = await bcrypt.compare(password, user.password)
+    if (!isPasswordMatch) {
+      res.status(401)
+      res.json({ message: 'Unauthorized user credentials' })
+      return
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    )
+
+    res.json({
+      token,
+      user: {
+        eamil: user.email,
+      }
+    })
+    return
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+    return
+  }
+
+
 }
 
-export const dashboard=async(req,res)=>{
-    try{
-        res.json({
-            message:'Welcome to dashboard',
-            email:req.user.email,
-            
-        })
-    }catch(err){
-        res.status(401).json({message:'Unauthorized user'})
-    }
+export const dashboard = async (req, res) => {
+  try {
+    res.json({
+      message: 'Welcome to dashboard',
+      email: req.user.email,
+
+    })
+  } catch (err) {
+    res.status(401).json({ message: 'Unauthorized user' })
+  }
 }
 
 export const forgotPassword = async (req, res) => {
@@ -114,22 +113,23 @@ export const forgotPassword = async (req, res) => {
     // mail tsetaccount
     const testAccount = await nodemailer.createTestAccount();
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.ethereal.email",
-  port: 587,
-  secure: false,
-  auth: {
-    user: testAccount.user,
-    pass: testAccount.pass,
-  },
-  tls: {
-    rejectUnauthorized: false, 
-  },
-});
+    const transporter = nodemailer.createTransport({
+      host: "smtp.ethereal.email",
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
 
 
     // // info & resetlink in mail
     const resetLink = `http://localhost:3000/reset-password/${token}`;
+
     const info = await transporter.sendMail({
       from: '"Admin" <admin@email.com>',
       to: user.email,
@@ -137,10 +137,10 @@ const transporter = nodemailer.createTransport({
       html: `<h4>Reset Password link is given below. Click the link and reset your password.</h4>
          <a href="${resetLink}">${resetLink}</a>`,
     });
-    const link=nodemailer.getTestMessageUrl(info)
+    const link = nodemailer.getTestMessageUrl(info)
     console.log("Preview URL:", nodemailer.getTestMessageUrl(info));
 
-    res.json({ message: "Reset link sent" ,link});
+    res.json({ message: "Reset link sent", link });
 
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
@@ -191,7 +191,7 @@ export const resetPassword = async (req, res) => {
 
     res.status(200).json({
       message: "Password reset successful. Please login again.",
-      user:{password:user.password,email:user.email}
+      user: { password: user.password, email: user.email }
     });
 
   } catch (err) {
