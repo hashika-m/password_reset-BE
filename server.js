@@ -11,7 +11,16 @@ connectDB()
 
 // middleware
 app.use(express.json())
-app.use(cors())
+// front end api calling usage
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
+
+
+
 // routes
 app.use('/api',userRoute)
 
