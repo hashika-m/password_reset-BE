@@ -72,6 +72,7 @@ export const login = async (req, res) => {
     })
     return
   } catch (err) {
+    console.log(err)
     res.status(500).json({ message: err.message })
     return
   }
