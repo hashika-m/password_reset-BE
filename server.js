@@ -13,6 +13,7 @@ connectDB()
 
 
 // middleware
+app.use(cors())
 app.use(express.json())
 // front end api calling usage
 
