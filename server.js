@@ -12,12 +12,6 @@ const PORT=process.env.PORT ||8000
 connectDB()
 
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL,   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
-
-app.options("*", cors());
 // middleware
 app.use(express.json())
 // front end api calling usage
