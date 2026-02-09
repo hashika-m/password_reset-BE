@@ -7,17 +7,21 @@ import cors from 'cors'
 dotenv.config()
 const app=express()
 const PORT=process.env.PORT ||8000
-connectDB()
 
-// middleware
-app.use(express.json())
-// front end api calling usage
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     
   })
 );
+connectDB()
+
+
+
+// middleware
+app.use(express.json())
+// front end api calling usage
+
 
 
 
