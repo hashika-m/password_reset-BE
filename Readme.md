@@ -10,7 +10,7 @@ routes & controller logic with work flow:
 5. /resetPassword:token(the random string that is generated for user as passwordRestToken in db) -  by entering the newPAssword and confirmPassword in (body) the db password gets updated with encryted new-password with removal of PasswordResetToken and passwordResetExpires.
 6. /login - email and new-password the user can login successfully  
 
-<!-- api endpoints port-->
+<!-- local api endpoints port-->
 BE-PORT=8000 for backend http req,res(API server) 
 MailPORT=587 for etheral mail
 FE-PORT =5173 (UI client)
