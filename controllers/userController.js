@@ -118,48 +118,60 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    const resetLink = `${process.env.FRONTEND_URL}/resetPassword/${token}`;
-    console.log("RESET PASSWORD LINK (FALLBACK):", resetLink);
-
-    const testAccount = await nodemailer.createTestAccount();
-    console.log("ETHEREAL ACCOUNT:", testAccount.user);
-
-    const transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-      tls: { rejectUnauthorized: false },
-    });
-
-    console.log("SENDING EMAIL...");
-    // console.log("RESET LINK (ALWAYS PRINTS):", resetLink);
-
-
-    const info = await transporter.sendMail({
-      from: '"Admin" <admin@email.com>',
-      to: user.email,
-      subject: "Reset Password",
-      html: `<a href="${resetLink}">${resetLink}</a>`,
-    });
-
-    // console.log("EMAIL SENT");
-    // console.log("INFO:", info);
-
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    console.log("ETHEREAL PREVIEW URL:", previewUrl);
-
+    // Respond immediately to avoid timeout
     res.json({
-      message: "Reset link sent (Ethereal)",
-      previewUrl,
+      message: "If the email exists, a reset link has been sent.",
+    });
+
+    // Handle email sending asynchronously in the background (fire-and-forget)
+    setImmediate(() => {
+      const resetLink = `${process.env.FRONTEND_URL}/resetPassword/${token}`;
+      console.log("RESET PASSWORD LINK (FALLBACK):", resetLink);
+
+      nodemailer.createTestAccount((err, testAccount) => {
+        if (err) {
+          console.error("CREATE TEST ACCOUNT ERROR:", err);
+          return;
+        }
+        console.log("ETHEREAL ACCOUNT:", testAccount.user);
+
+        const transporter = nodemailer.createTransport({
+          host: "smtp.ethereal.email",
+          port: 465,
+          secure: true,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+          connectionTimeout: 60000, // 60 seconds
+          greetingTimeout: 60000,
+          socketTimeout: 60000,
+        });
+
+        console.log("SENDING EMAIL...");
+
+        transporter.sendMail({
+          from: '"Admin" <admin@email.com>',
+          to: user.email,
+          subject: "Reset Password",
+          html: `<a href="${resetLink}">${resetLink}</a>`,
+        }, (err, info) => {
+          if (err) {
+            console.error("SEND EMAIL ERROR:", err);
+            return;
+          }
+          console.log("EMAIL SENT");
+          console.log("INFO:", info);
+
+          const previewUrl = nodemailer.getTestMessageUrl(info);
+          console.log("ETHEREAL PREVIEW URL:", previewUrl);
+        });
+      });
     });
 
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
-    res.status(500).json({ message: err.message });
+    // Since response is already sent, log the error but don't send another response
   }
 };
 
@@ -177,6 +189,7 @@ export const resetPassword = async (req, res) => {
         .status(400)
         .json({ message: "All fields are required" });
     }
+    
 
     if (newPassword !== confirmPassword) {
       return res
