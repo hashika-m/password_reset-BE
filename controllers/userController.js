@@ -67,12 +67,12 @@ export const login = async (req, res) => {
     res.json({
       token,
       user: {
-        eamil: user.email,
+        email: user.email,
       }
     })
     return
   } catch (err) {
-    console.log(err)
+    console.error(err)
     res.status(500).json({ message: err.message })
     return
   }
