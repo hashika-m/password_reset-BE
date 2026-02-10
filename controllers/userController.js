@@ -93,6 +93,90 @@ export const dashboard = async (req, res) => {
 }
 
 
+// using etheral email:
+// export const forgotPassword = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return res.status(400).json({ message: "Email is required" });
+//     }
+
+//     const cleanEmail = email.trim();
+//     console.log("Forgot password email received:", cleanEmail);
+
+//     const user = await User.findOne({
+//       email: { $regex: `^${cleanEmail}$`, $options: "i" },
+//     });
+
+//     if (!user) {
+//       return res.status(400).json({ message: "Email not found" });
+//     }
+
+//     const token = Math.random().toString(36).slice(-8);
+
+//     user.resetPasswordToken = token;
+//     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+//     await user.save();
+
+//     // Respond immediately to avoid timeout
+//     res.json({
+//       message: "If the email exists, a reset link has been sent.",
+//     });
+
+//     // Handle email sending asynchronously in the background (fire-and-forget)
+//     setImmediate(() => {
+//       const resetLink = `${process.env.FRONTEND_URL}/resetPassword/${token}`;
+//       console.log("RESET PASSWORD LINK (FALLBACK):", resetLink);
+
+//       nodemailer.createTestAccount((err, testAccount) => {
+//         if (err) {
+//           console.error("CREATE TEST ACCOUNT ERROR:", err);
+//           return;
+//         }
+//         console.log("ETHEREAL ACCOUNT:", testAccount.user);
+
+//         const transporter = nodemailer.createTransport({
+//           host: "smtp.ethereal.email",
+//           port: 465,
+//           secure: true,
+//           auth: {
+//             user: testAccount.user,
+//             pass: testAccount.pass,
+//           },
+//           connectionTimeout: 60000, // 60 seconds
+//           greetingTimeout: 60000,
+//           socketTimeout: 60000,
+//         });
+
+//         console.log("SENDING EMAIL...");
+
+//         transporter.sendMail({
+//           from: '"Admin" <admin@email.com>',
+//           to: user.email,
+//           subject: "Reset Password",
+//           html: `<a href="${resetLink}">${resetLink}</a>`,
+//         }, (err, info) => {
+//           if (err) {
+//             console.error("SEND EMAIL ERROR:", err);
+//             return;
+//           }
+//           console.log("EMAIL SENT");
+//           console.log("INFO:", info);
+
+//           const previewUrl = nodemailer.getTestMessageUrl(info);
+//           console.log("ETHEREAL PREVIEW URL:", previewUrl);
+//         });
+//       });
+//     });
+
+//   } catch (err) {
+//     console.error("FORGOT PASSWORD ERROR:", err);
+//     // Since response is already sent, log the error but don't send another response
+//   }
+// };
+
+// using brevo
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -101,12 +185,10 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     console.log("Forgot password email received:", cleanEmail);
 
-    const user = await User.findOne({
-      email: { $regex: `^${cleanEmail}$`, $options: "i" },
-    });
+    const user = await User.findOne({ email: cleanEmail });
 
     if (!user) {
       return res.status(400).json({ message: "Email not found" });
@@ -118,63 +200,49 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // Respond immediately to avoid timeout
+    // Respond immediately
     res.json({
       message: "If the email exists, a reset link has been sent.",
     });
 
-    // Handle email sending asynchronously in the background (fire-and-forget)
-    setImmediate(() => {
-      const resetLink = `${process.env.FRONTEND_URL}/resetPassword/${token}`;
-      console.log("RESET PASSWORD LINK (FALLBACK):", resetLink);
-
-      nodemailer.createTestAccount((err, testAccount) => {
-        if (err) {
-          console.error("CREATE TEST ACCOUNT ERROR:", err);
-          return;
-        }
-        console.log("ETHEREAL ACCOUNT:", testAccount.user);
+    // Send email in background
+    setImmediate(async () => {
+      try {
+        const resetLink = `${process.env.FRONTEND_URL}/resetPassword/${token}`;
+        console.log("RESET PASSWORD LINK:", resetLink);
 
         const transporter = nodemailer.createTransport({
-          host: "smtp.ethereal.email",
-          port: 465,
-          secure: true,
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT), // 587
+          secure: false,
           auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
           },
-          connectionTimeout: 60000, // 60 seconds
-          greetingTimeout: 60000,
-          socketTimeout: 60000,
         });
 
-        console.log("SENDING EMAIL...");
-
-        transporter.sendMail({
-          from: '"Admin" <admin@email.com>',
+        await transporter.sendMail({
+          from: `"Admin" <${process.env.SMTP_FROM}>`,
           to: user.email,
           subject: "Reset Password",
-          html: `<a href="${resetLink}">${resetLink}</a>`,
-        }, (err, info) => {
-          if (err) {
-            console.error("SEND EMAIL ERROR:", err);
-            return;
-          }
-          console.log("EMAIL SENT");
-          console.log("INFO:", info);
-
-          const previewUrl = nodemailer.getTestMessageUrl(info);
-          console.log("ETHEREAL PREVIEW URL:", previewUrl);
+          html: `
+            <p>You requested a password reset.</p>
+            <p>Click the link below to reset your password:</p>
+            <a href="${resetLink}">${resetLink}</a>
+            <p>This link expires in 10 minutes.</p>
+          `,
         });
-      });
+
+        console.log("RESET PASSWORD EMAIL SENT");
+      } catch (emailErr) {
+        console.error("EMAIL SEND ERROR:", emailErr);
+      }
     });
 
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
-    // Since response is already sent, log the error but don't send another response
   }
 };
-
 
 
 
