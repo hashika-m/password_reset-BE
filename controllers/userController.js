@@ -202,7 +202,7 @@ export const forgotPassword = async (req, res) => {
 
     // Respond immediately
     res.json({
-      message: "If the email exists, a reset link has been sent.",
+      message: "Reset link has been sent via email.",
     });
 
     // Send email in background
