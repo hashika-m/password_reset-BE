@@ -2,6 +2,8 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import User from '../models/User.js'
 import nodemailer from 'nodemailer'
+import SibApiV3Sdk from "sib-api-v3-sdk";
+import dotenv from 'dotenv'
 
 
 
@@ -247,7 +249,7 @@ export const dashboard = async (req, res) => {
 
 // using brevo- api key and sib-api-v3-sdk package
 
-import SibApiV3Sdk from "sib-api-v3-sdk";
+
 
 export const forgotPassword = async (req, res) => {
   try {
