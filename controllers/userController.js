@@ -176,7 +176,79 @@ export const dashboard = async (req, res) => {
 //   }
 // };
 
-// using brevo
+// using brevo -smtp key
+// export const forgotPassword = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+
+//     if (!email) {
+//       return res.status(400).json({ message: "Email is required" });
+//     }
+
+//     const cleanEmail = email.trim().toLowerCase();
+//     console.log("Forgot password email received:", cleanEmail);
+
+//     const user = await User.findOne({ email: cleanEmail });
+
+//     if (!user) {
+//       return res.status(400).json({ message: "Email not found" });
+//     }
+
+//     const token = Math.random().toString(36).slice(-8);
+
+//     user.resetPasswordToken = token;
+//     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
+//     await user.save();
+
+//     // Respond immediately
+//     res.json({
+//       message: "Reset link has been sent via email.",
+//     });
+
+//     // Send email in background
+//     setImmediate(async () => {
+//       try {
+//         const resetLink = `${process.env.FRONTEND_URL}/resetPassword/${token}`;
+//         console.log("RESET PASSWORD LINK:", resetLink);
+
+//         const transporter = nodemailer.createTransport({
+//           host: process.env.SMTP_HOST,
+//           port: Number(process.env.SMTP_PORT), // 587
+//           secure: false,
+//           auth: {
+//             user: process.env.SMTP_USER,
+//             pass: process.env.SMTP_PASS,
+//           },
+//         });
+
+//         await transporter.sendMail({
+//           from: `"Admin" <${process.env.SMTP_FROM}>`,
+//           to: user.email,
+//           subject: "Reset Password",
+//           html: `
+//             <p>You requested a password reset.</p>
+//             <p>Click the link below to reset your password:</p>
+//             <a href="${resetLink}">${resetLink}</a>
+//             <p>This link expires in 10 minutes.</p>
+//           `,
+//         });
+
+//         console.log("RESET PASSWORD EMAIL SENT");
+//       } catch (emailErr) {
+//         console.error("EMAIL SEND ERROR:", emailErr);
+//       }
+//     });
+
+//   } catch (err) {
+//     console.error("FORGOT PASSWORD ERROR:", err);
+//   }
+// };
+
+
+// using brevo- api key and sib-api-v3-sdk package
+
+import SibApiV3Sdk from "sib-api-v3-sdk";
+
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -200,32 +272,36 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    // Respond immediately
+    // respond immediately
     res.json({
       message: "Reset link has been sent via email.",
     });
 
-    // Send email in background
+    // ===== BREVO EMAIL (background) =====
     setImmediate(async () => {
       try {
         const resetLink = `${process.env.FRONTEND_URL}/resetPassword/${token}`;
         console.log("RESET PASSWORD LINK:", resetLink);
 
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: Number(process.env.SMTP_PORT), // 587
-          secure: false,
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
+        // Brevo config
+        const client = SibApiV3Sdk.ApiClient.instance;
+        client.authentications["api-key"].apiKey =
+          process.env.BREVO_API_KEY;
 
-        await transporter.sendMail({
-          from: `"Admin" <${process.env.SMTP_FROM}>`,
-          to: user.email,
-          subject: "Reset Password",
-          html: `
+        const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+
+        await apiInstance.sendTransacEmail({
+          sender: {
+            email: process.env.BREVO_SENDER_EMAIL,
+            name: process.env.BREVO_SENDER_NAME,
+          },
+          to: [
+            {
+              email: user.email,
+            },
+          ],
+          subject: "Reset your password",
+          htmlContent: `
             <p>You requested a password reset.</p>
             <p>Click the link below to reset your password:</p>
             <a href="${resetLink}">${resetLink}</a>
@@ -233,9 +309,9 @@ export const forgotPassword = async (req, res) => {
           `,
         });
 
-        console.log("RESET PASSWORD EMAIL SENT");
+        console.log("RESET PASSWORD EMAIL SENT (BREVO)");
       } catch (emailErr) {
-        console.error("EMAIL SEND ERROR:", emailErr);
+        console.error("BREVO EMAIL ERROR:", emailErr);
       }
     });
 
